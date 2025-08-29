@@ -31,7 +31,6 @@ improves the quality of camera pose prediction with a global perspective.
 - [x] Release point cloud and camera pose estimation code.
 - [ ] Release evaluation code.
 - [ ] Release training code.
-- [ ] Release data processing code.
 
 ## 🌍 Installation
 
