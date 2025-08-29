@@ -50,10 +50,10 @@ Download the checkpoint from [huggingface](https://huggingface.co/lizizun/WinT3R
 
 
 ```bash
-# Run with default example video
+# Run with default example images
 python recon.py
 
-# Run on your own data (image folder or .mp4 file)
+# Run on your own data
 python recon.py --data_path <path/to/your/images_dir>
 ```
 
