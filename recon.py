@@ -7,12 +7,10 @@ from dust3r.utils.misc import move_to_device
 import argparse
 
 import numpy as np
-from copy import deepcopy
 from dust3r.utils.vis_utils import write_ply
 
 from dust3r.utils.image import load_images_for_eval as load_images
 from layers.pose_enc import pose_encoding_to_extri
-from prettytable import PrettyTable
 from typing import Union
 
 def save_image_grid(images: np.ndarray, grid_shape: tuple, save_path: str):
@@ -66,27 +64,6 @@ def recover_image(normalized_tensor):
     unnormalized_tensor = torch.clamp(unnormalized_tensor, 0, 1)
     
     return unnormalized_tensor
-
-def count_parameters(model, top_k=15):
-    table = PrettyTable([f"Modules (only show top {top_k} mudules)", "Parameters"])
-    total_params = 0
-    res = []
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            continue
-        params = parameter.numel()
-        res.append([name, params])
-        # table.add_row([name, params])
-        total_params += params
-
-    if top_k > 0:
-        res = sorted(res, key=lambda x: x[1], reverse=True)
-        for i in range(top_k):
-            table.add_row(res[i])
-
-    print(table)
-    print(f"Total Trainable Params: {total_params}")
-    return total_params
     
 
 if __name__ == '__main__':
@@ -101,7 +78,7 @@ if __name__ == '__main__':
                         help="Path to save the output .ply file.")
     parser.add_argument("--inference_mode", type=str, default='online',
                         help="WinT3R inference mode. online or offline")
-    parser.add_argument("--ckpt", type=str, default='/mnt/hwfile/lizizun/paper/rav_new/rav/outputs/rav_static_15ds_refine_full-2025-07-28_21-07-37/ckpts/checkpoint_10/pytorch_model.bin',
+    parser.add_argument("--ckpt", type=str, default='checkpoints/pytorch_model.bin',
                         help="Path to the model checkpoint file. Default: None")
     parser.add_argument("--device", type=str, default='cuda',
                         help="Device to run inference on ('cuda' or 'cpu'). Default: 'cuda'")
