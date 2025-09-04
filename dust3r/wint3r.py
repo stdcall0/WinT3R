@@ -492,7 +492,7 @@ class WinT3R(CroCoNet):
         if len(views) < self.window_size:
             views.extend([views[-1]]*(self.window_size-len(views)))
         elif len(views)%(self.window_size//2)!=0:
-            append_length = len(views)%(self.window_size//2)
+            append_length = self.window_size//2 - len(views)%(self.window_size//2)
             views.extend([views[-1]]*append_length)
 
         shape, feat_ls, pos = self._encode_views(views)
@@ -603,7 +603,7 @@ class WinT3R(CroCoNet):
         if len(views) < self.window_size:
             views.extend([views[-1]]*(self.window_size-len(views)))
         elif len(views)%(self.window_size//2)!=0:
-            append_length = len(views)%(self.window_size//2)
+            append_length = self.window_size//2 - len(views)%(self.window_size//2)
             views.extend([views[-1]]*append_length)
 
         state_feat, state_pos = None, None
