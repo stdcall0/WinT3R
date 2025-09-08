@@ -109,8 +109,10 @@ if __name__ == '__main__':
 
     batch = move_to_device(dataset, args.device)
     imgs = torch.stack([recover_image(view['img'].detach().cpu()) for view in batch], dim=1)
-    
-    pred = model(batch, ret_first_pred=False, mode=args.inference_mode)
+
+    model.eval()
+    with torch.no_grad():
+        pred = model(batch, ret_first_pred=False, mode=args.inference_mode)
 
     colors = imgs.permute(0, 1, 3, 4, 2)
     B, N, H, W, _ = colors.shape 
