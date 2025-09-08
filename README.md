@@ -1,5 +1,5 @@
 # WinT3R: Window-Based Streaming Rrconstruction With Camera Token Pool
-[![Paper](https://img.shields.io/badge/Paper-00AEEF?style=plastic&logo=arxiv&logoColor=white)](https://lizizun.github.io/WinT3R.github.io/)
+[![Paper](https://img.shields.io/badge/Paper-00AEEF?style=plastic&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2509.05296)
 [![Website](https://img.shields.io/website-up-down-green-red/http/shields.io.svg)](https://lizizun.github.io/WinT3R.github.io/)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97-Hugging%20Face-yellow)](https://huggingface.co/lizizun/WinT3R)
 
@@ -60,14 +60,14 @@ python recon.py --data_path <path/to/your/images_dir>
 
 ## 📜 Citation 
 ```bibtex
-@misc{zhang2025flarefeedforwardgeometryappearance,
-      title={FLARE: Feed-forward Geometry, Appearance and Camera Estimation from Uncalibrated Sparse Views}, 
-      author={Shangzhan Zhang and Jianyuan Wang and Yinghao Xu and Nan Xue and Christian Rupprecht and Xiaowei Zhou and Yujun Shen and Gordon Wetzstein},
+@misc{li2025wint3rwindowbasedstreamingreconstruction,
+      title={WinT3R: Window-Based Streaming Reconstruction with Camera Token Pool}, 
+      author={Zizun Li and Jianjun Zhou and Yifan Wang and Haoyu Guo and Wenzheng Chang and Yang Zhou and Haoyi Zhu and Junyi Chen and Chunhua Shen and Tong He},
       year={2025},
-      eprint={2502.12138},
+      eprint={2509.05296},
       archivePrefix={arXiv},
       primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2502.12138}, 
+      url={https://arxiv.org/abs/2509.05296}, 
 }
 ```
 ## 🙏 Acknowledgement
