@@ -1,4 +1,4 @@
-# WinT3R: Window-Based Streaming Rrconstruction With Camera Token Pool
+# WinT3R: Window-Based Streaming Reconstruction With Camera Token Pool
 [![Paper](https://img.shields.io/badge/Paper-00AEEF?style=plastic&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2509.05296)
 [![Website](https://img.shields.io/website-up-down-green-red/http/shields.io.svg)](https://lizizun.github.io/WinT3R.github.io/)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97-Hugging%20Face-yellow)](https://huggingface.co/lizizun/WinT3R)
