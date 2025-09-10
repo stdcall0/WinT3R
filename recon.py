@@ -78,6 +78,8 @@ if __name__ == '__main__':
                         help="Path to save the output .ply file.")
     parser.add_argument("--inference_mode", type=str, default='online',
                         help="WinT3R inference mode. online or offline")
+    parser.add_argument("--interval", type=int, default=10,
+                        help="Interval to sample video. Default: 10 for video")
     parser.add_argument("--ckpt", type=str, default='checkpoints/pytorch_model.bin',
                         help="Path to the model checkpoint file. Default: None")
     parser.add_argument("--device", type=str, default='cuda',
@@ -85,7 +87,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     file = "examples/001"
-    dataset = load_images(args.data_path, size=512, verbose=True, crop=True)
+    dataset = load_images(args.data_path, size=512, verbose=True, crop=True, interval=args.interval)
 
     from dust3r.wint3r import WinT3R
     model = WinT3R(

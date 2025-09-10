@@ -8,6 +8,7 @@ import os
 import torch
 import numpy as np
 import PIL.Image
+import cv2
 from PIL.ImageOps import exif_transpose
 import torchvision.transforms as tvf
 import torch.nn.functional as F
@@ -139,15 +140,32 @@ def load_images(folder_or_list, size, square_ok=False, verbose=True):
 
 
 def load_images_for_eval(
-    folder_or_list, size, square_ok=False, verbose=True, crop=True, norm_mode=CustomNorm, data_type="torch"
+    folder_or_list, size, square_ok=False, verbose=True, crop=True, norm_mode=CustomNorm, data_type="torch", interval = 10
 ):
     """open and convert all images in a list or folder to proper input format for DUSt3R"""
+    is_video = False
     if isinstance(folder_or_list, str):
-        if verbose:
-            print(f">> Loading images from {folder_or_list}")
-
-        
-        root, folder_content = folder_or_list, sorted(os.listdir(folder_or_list))
+        if folder_or_list.lower().endswith('.mp4'):
+            is_video = True
+            folder_content = []
+            if verbose:
+                print(f">> Loading images from {folder_or_list}")
+            cap = cv2.VideoCapture(folder_or_list)
+            if not cap.isOpened(): raise IOError(f"Cannot open video file: {folder_or_list}")
+            frame_idx = 0
+            while True:
+                ret, frame = cap.read()
+                if not ret: break
+                if frame_idx % interval == 0:
+                    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    folder_content.append(PIL.Image.fromarray(rgb_frame))
+                frame_idx += 1
+            cap.release()
+            root = folder_or_list
+        else:
+            if verbose:
+                print(f">> Loading images from {folder_or_list}")
+            root, folder_content = folder_or_list, sorted(os.listdir(folder_or_list))
 
     elif isinstance(folder_or_list, list):
         if verbose:
@@ -164,9 +182,12 @@ def load_images_for_eval(
 
     imgs = []
     for path in folder_content:
-        if not path.lower().endswith(supported_images_extensions):
-            continue
-        img = exif_transpose(PIL.Image.open(os.path.join(root, path))).convert("RGB")
+        if is_video:
+            img = exif_transpose(path)
+        else:
+            if not path.lower().endswith(supported_images_extensions):
+                continue
+            img = exif_transpose(PIL.Image.open(os.path.join(root, path))).convert("RGB")
         W1, H1 = img.size
         if size == 224:
             # resize short side to 224 (then crop)
