@@ -584,6 +584,9 @@ class WinT3R(CroCoNet):
             # res['conf'] = res['conf'][:, views_idxs]
             res["camera_pos_enc"] = [cam_pose_enc[:, views_idxs] for cam_pose_enc in res["camera_pos_enc"]]
 
+        # Translate the relative coordinate system to the coordinate system relative to the first frame.
+        res["camera_pos_enc"] = [compute_relative_poses(camera_pos_en) for camera_pos_en in res["camera_pos_enc"]]
+
         extrinsics = pose_encoding_to_extri(res["camera_pos_enc"][-1])
         R_cam_to_world = extrinsics[:, :, :3, :3]     #  B, S, 3, 3
         t_cam_to_world = extrinsics[:, :, :3, 3]      #  B, S, 3
@@ -674,8 +677,6 @@ class WinT3R(CroCoNet):
                     res['pts_local'] = torch.cat([res['pts_local'], ress['pts_local'].reshape(B, S, *ress['pts_local'].shape[1:])], dim=1)
                     res['conf'] = torch.cat([res['conf'], ress['conf'].reshape(B, S, *ress['conf'].shape[1:])], dim=1)
 
-        # res["camera_pos_enc"] = [compute_relative_poses(camera_pos_en) for camera_pos_en in camera_pos_encs]
-
         final_ress = []
         for views_ind in views_idxs:
             conf_score = res['conf'][:, views_ind].sum(dim=[-1, -2])
@@ -696,6 +697,9 @@ class WinT3R(CroCoNet):
             views_idxs = [max(idxs) for idxs in views_idxs]
             # res['conf'] = res['conf'][:, views_idxs]
             res["camera_pos_enc"] = [cam_pose_enc[:, views_idxs] for cam_pose_enc in res["camera_pos_enc"]]
+
+        # Translate the relative coordinate system to the coordinate system relative to the first frame.
+        res["camera_pos_enc"] = [compute_relative_poses(camera_pos_en) for camera_pos_en in res["camera_pos_enc"]]
 
         extrinsics = pose_encoding_to_extri(res["camera_pos_enc"][-1])
         R_cam_to_world = extrinsics[:, :, :3, :3]     #  B, S, 3, 3
