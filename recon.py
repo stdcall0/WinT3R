@@ -237,12 +237,13 @@ if __name__ == '__main__':
     pred_pts = world_coords_points
     pred_conf = torch.sigmoid(pred['conf'])
     pred_depth = pred['pts_local'][..., 2:]
-    masks_depth = pred_depth[..., 0]  < 500.0
-    masks_edge = ~depth_edge(pred_depth.squeeze(-1), rtol=0.05)
-    masks = masks_depth*masks_edge
-    pred_pts = pred_pts[masks]
-
+    
     pred = {"conf": pred_conf, "points": pred_pts, "images": colors}
+    edge = depth_edge(pred_depth.squeeze(-1), rtol=0.05)
+    pred['conf'][edge] = 0.0
+    masks_depth = pred_depth[..., 0] >= 500.0
+    pred['conf'][masks_depth] = 0.0
+
     for key in pred.keys():
         if isinstance(pred[key], torch.Tensor):
             pred[key] = pred[key].cpu().numpy().squeeze(0)  # remove batch dimension
