@@ -1,6 +1,11 @@
+torch==2.5.1
+torchvision==0.20.1
 pillow
 numpy
 opencv-python
 typing
 transformers
 plyfile
+trimesh
+matplotlib
+scipy
