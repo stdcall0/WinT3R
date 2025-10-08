@@ -174,7 +174,7 @@ if __name__ == '__main__':
                         help="Path to the input image directory or a video file.")
     parser.add_argument("--save_path", type=str, default='out.glb',
                         help="Path to save the output .glb file.")
-    parser.add_argument("--inference_mode", type=str, default='offline',
+    parser.add_argument("--inference_mode", type=str, default='online',
                         help="WinT3R inference mode. online or offline")
     parser.add_argument("--interval", type=int, default=10,
                         help="Interval to sample video. Default: 10 for video")
@@ -188,6 +188,7 @@ if __name__ == '__main__':
 
     file = "examples/001"
     dataset = load_images(args.data_path, size=512, verbose=True, crop=True, interval=args.interval)
+    dataset = dataset + dataset
 
     from dust3r.wint3r import WinT3R
     model = WinT3R(
@@ -234,11 +235,15 @@ if __name__ == '__main__':
     R_cam_to_world = extrinsics[:, :, :3, :3]     #  B, S, 3, 3
     t_cam_to_world = extrinsics[:, :, :3, 3]      #  B, S, 3
     world_coords_points = torch.einsum("bsij,bshwj->bshwi", R_cam_to_world, pred['pts_local']) + t_cam_to_world[:, :, None, None]   #B, S, H, W, 3
-    pred_pts = world_coords_points
-    pred_conf = torch.sigmoid(pred['conf'])
-    pred_depth = pred['pts_local'][..., 2:]
     
-    pred = {"conf": pred_conf, "points": pred_pts, "images": colors}
+    # 只使用后一半的点云数据
+    half_idx = world_coords_points.shape[1] // 2
+    pred_pts = world_coords_points[:, half_idx:]
+    pred_conf = torch.sigmoid(pred['conf'])[:, half_idx:]
+    pred_depth = pred['pts_local'][..., 2:][:, half_idx:]
+    colors_half = colors[:, half_idx:]
+    
+    pred = {"conf": pred_conf, "points": pred_pts, "images": colors_half}
     edge = depth_edge(pred_depth.squeeze(-1), rtol=0.05)
     pred['conf'][edge] = 0.0
     masks_depth = pred_depth[..., 0] >= 500.0
