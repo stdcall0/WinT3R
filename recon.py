@@ -188,7 +188,7 @@ if __name__ == '__main__':
 
     file = "examples/001"
     dataset = load_images(args.data_path, size=512, verbose=True, crop=True, interval=args.interval)
-    dataset = dataset + dataset
+    dataset = dataset + dataset[::-1]
 
     from dust3r.wint3r import WinT3R
     model = WinT3R(
