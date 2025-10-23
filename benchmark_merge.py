@@ -56,7 +56,7 @@ def compare_models(data_path, ckpt_path, merge_ratio=0.6, device='cuda', inferen
         dec_depth=12,
         dec_num_heads=12,
         landscape_only=False,
-        enable_token_merge=False,  # Baseline
+        #enable_token_merge=False,  # Baseline
     ).to(device)
     
     weights = torch.load(ckpt_path, weights_only=False, map_location=device)
