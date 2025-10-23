@@ -69,6 +69,8 @@ class WinT3R(CroCoNet):
                 state_dec_num_heads=16,
                 ckpts=None,
                 window_size=4,
+                merge_tokens=False,
+                merging_ratio=0.6,
                 **croco_kwargs,
                  ):
         self.gradient_checkpointing = True
@@ -76,6 +78,9 @@ class WinT3R(CroCoNet):
         croco_kwargs = fill_default_args(
             croco_kwargs, CrocoConfig.__init__
         )
+        
+        self.merge_tokens = merge_tokens
+        self.merging_ratio = merging_ratio
 
         self.patch_embed_cls = patch_embed_cls
         self.croco_args = croco_kwargs
@@ -140,6 +145,8 @@ class WinT3R(CroCoNet):
                     norm_layer=norm_layer,
                     norm_mem=norm_im2_in_dec,
                     rope=self.rope,
+                    merge_tokens=self.merge_tokens,
+                    merging_ratio=self.merging_ratio,
                 )
                 for i in range(dec_depth)
             ]
