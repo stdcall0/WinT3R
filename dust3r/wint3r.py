@@ -69,18 +69,15 @@ class WinT3R(CroCoNet):
                 state_dec_num_heads=16,
                 ckpts=None,
                 window_size=4,
-                merge_tokens=False,
-                merging_ratio=0.6,
+                global_merging=None,
                 **croco_kwargs,
                  ):
+        self.global_merging = global_merging
         self.gradient_checkpointing = True
         self.fixed_input_length = True
         croco_kwargs = fill_default_args(
             croco_kwargs, CrocoConfig.__init__
         )
-        
-        self.merge_tokens = merge_tokens
-        self.merging_ratio = merging_ratio
 
         self.patch_embed_cls = patch_embed_cls
         self.croco_args = croco_kwargs
@@ -145,8 +142,6 @@ class WinT3R(CroCoNet):
                     norm_layer=norm_layer,
                     norm_mem=norm_im2_in_dec,
                     rope=self.rope,
-                    merge_tokens=self.merge_tokens,
-                    merging_ratio=self.merging_ratio,
                 )
                 for i in range(dec_depth)
             ]
@@ -241,7 +236,11 @@ class WinT3R(CroCoNet):
         )
 
     def _encode_image(self, image, true_shape):
+        # print(f"image.shape: {image.shape}")
+        # print(f"true_shape.shape: {true_shape.shape}")
         x, pos = self.patch_embed(image, true_shape=true_shape)
+        # print(f"x.shape: {x.shape}")
+        # print(f"pos.shape: {pos.shape}")
         assert self.enc_pos_embed is None
         for blk in self.enc_blocks:
             if self.gradient_checkpointing and self.training:
@@ -336,7 +335,7 @@ class WinT3R(CroCoNet):
             full_pos.chunk(len(views), dim=0),  # [B, N, C]*n_views
         )
 
-    def _decoder(self, f_state, pos_state, f_img, pos_img):
+    def _decoder(self, f_state, pos_state, f_img, pos_img, patch_width, patch_height):
         final_output = [(f_state, f_img)]  # before projection
         assert f_state.shape[-1] == self.dec_embed_dim
 
@@ -369,7 +368,10 @@ class WinT3R(CroCoNet):
                 )
             else:
                 f_state, _ = blk_state(*final_output[-1][::+1], pos_state, pos_img)
-                f_img, _, f_img_local= blk_img(*final_output[-1][::-1], pos_img, pos_state, [B, S, P, C])
+                if self.global_merging is None:
+                    f_img, _, f_img_local= blk_img(*final_output[-1][::-1], pos_img, pos_state, [B, S, P, C])
+                else:
+                    f_img, _, f_img_local= blk_img(*final_output[-1][::-1], pos_img, pos_state, [B, S, P, C], self.global_merging, patch_width, patch_height)
             
             final_output.append((f_state, f_img))
         del final_output[1]  # duplicate with final_output[0]
@@ -393,9 +395,11 @@ class WinT3R(CroCoNet):
         state_pos,
         current_feat,
         current_pos,
+        patch_width,
+        patch_height,
     ):
         new_state_feat, dec, f_img_local = self._decoder(
-            state_feat, state_pos, current_feat, current_pos
+            state_feat, state_pos, current_feat, current_pos, patch_width, patch_height
         )
         new_state_feat = new_state_feat[-1]
         return new_state_feat, dec, f_img_local
@@ -634,6 +638,12 @@ class WinT3R(CroCoNet):
                 views_idxs[views[i+j]["view_idx"]].append(window_idx*self.window_size+j)
             
             shape, feat_ls, pos = self._encode_views(views[i:end_idx])
+            img_h = shape[0][0][0]
+            img_w = shape[0][0][1]
+            patch_width = img_w // 16
+            patch_height = img_h // 16
+            # print(f"img_h: {img_h}, img_w: {img_w}")
+            # print(f"patch_width: {patch_width}, patch_height: {patch_height}")
             feat = feat_ls[-1]
             if state_feat is None:
                 bs = pos[0].shape[0]
@@ -649,7 +659,10 @@ class WinT3R(CroCoNet):
            
             cam_token = cam_token.expand(bs, *cam_token.shape[1:])
 
+            # print(f"cam_token.shape: {cam_token.shape}")
+            # print(f"feat_i.shape: {feat_i.shape}")
             feat_i = torch.cat([cam_token, feat_i], dim=2)   # B, S, P, C
+            # print(f"torch.cat feat_i.shape: {feat_i.shape}")
 
             B, S, P, C = feat_i.shape
             pos_i = torch.cat([camera_pos, pos_i], dim=2)
@@ -658,6 +671,8 @@ class WinT3R(CroCoNet):
                 state_pos,
                 feat_i,
                 pos_i,
+                patch_width,
+                patch_height,
             )
 
             assert len(dec) == self.dec_depth + 1

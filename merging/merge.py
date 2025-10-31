@@ -76,14 +76,18 @@ def token_merge_bipartite2d(
      - (merge, unmerge): Two functions for merging tokens and restoring pre-merge state
     """
     B, N, _ = metric.shape  # Batch size B, total tokens N
+    print(f"[token_merge_bipartite2d] metric.shape: {metric.shape}")
     if r <= 0:
         return do_nothing, do_nothing
 
     gather = torch.gather
 
-    tokens_per_img = w * h + 5
+    tokens_per_img = w * h + 1
     num_imgs = N // tokens_per_img
-    assert tokens_per_img * num_imgs == N, "Token count doesn't match (w*h+5)*num_imgs"
+    # print(f"tokens_per_img: {tokens_per_img}")
+    # print(f"num_imgs: {num_imgs}")
+    # print(f"N: {N}")
+    assert tokens_per_img * num_imgs == N, "Token count doesn't match (w*h+1)*num_imgs"
 
     with torch.no_grad():
         # Determine whether to compute importance scores based on enable_protection
@@ -110,7 +114,7 @@ def token_merge_bipartite2d(
             cls_indices = (
                 torch.arange(1, num_imgs, device=metric.device) * tokens_per_img
             )
-            cls_indices = cls_indices[:, None] + torch.arange(5, device=metric.device)
+            cls_indices = cls_indices[:, None] + torch.arange(1, device=metric.device)
             idx_buffer_seq[cls_indices.flatten()] = -1
             effective_h = min(hsy * sy, h)
             effective_w = min(wsx * sx, w)
@@ -121,7 +125,7 @@ def token_merge_bipartite2d(
                     effective_grid_size, device=metric.device, dtype=torch.int64
                 )
                 grid_starts = (
-                    torch.arange(1, num_imgs, device=metric.device) * tokens_per_img + 5
+                    torch.arange(1, num_imgs, device=metric.device) * tokens_per_img + 1
                 )
                 grid_indices = grid_starts[:, None] + torch.arange(
                     effective_grid_size, device=metric.device
@@ -165,7 +169,7 @@ def token_merge_bipartite2d(
                 # Batch fill to target positions - still needs a small loop here, but operations are greatly reduced
                 for i in range(total_other_imgs):
                     img_idx = i + 1
-                    grid_start = img_idx * tokens_per_img + 5
+                    grid_start = img_idx * tokens_per_img + 1
                     flat_view = idx_buffer_batch[
                         i, :effective_h, :effective_w
                     ].flatten()

@@ -13,9 +13,8 @@ from torch.nn.functional import scaled_dot_product_attention
 from torch.backends.cuda import sdp_kernel
 from functools import partial
 
-from merging.merge import (
-    token_merge_bipartite2d,
-)
+from merging.merge import token_merge_bipartite2d
+
 
 def _ntuple(n):
     def parse(x):
@@ -92,8 +91,6 @@ class Attention(nn.Module):
 
     def __init__(
         self, dim, rope=None, num_heads=8, qkv_bias=False, attn_drop=0.0, proj_drop=0.0,
-        merge_tokens=False,
-        merging_ratio=0.6
     ):
         super().__init__()
         self.num_heads = num_heads
@@ -104,11 +101,8 @@ class Attention(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
         self.rope = rope.float() if rope is not None else None
-        
-        self.merge_tokens = merge_tokens
-        self.merging_ratio = merging_ratio
 
-    def forward(self, x, xpos):
+    def forward(self, x, xpos, global_merging=None, patch_width=None, patch_height=None):
         B, N, C = x.shape
 
         qkv = (
@@ -129,21 +123,16 @@ class Attention(nn.Module):
             q = q.to(q_type)
             k = k.to(k_type)
         
-        if self.merge_tokens:
+
+        # token merging
+        if global_merging is not None:
             generator = torch.Generator(device=x.device)
             generator.manual_seed(33)
-            
-            # Determine patch size
-            if xpos is not None and len(xpos.shape) == 3 and xpos.shape[-1] == 2:
-                max_y = xpos[:, :, 0].max().item() + 1 # +1, coords start with 0
-                max_x = xpos[:, :, 1].max().item() + 1
-                patch_height = int(max_y)
-                patch_width = int(max_x)
-            else:
-                patch_height = 32
-                patch_width = 32
-            
-            r = int(x.shape[1] * self.merging_ratio)
+
+            merge_ratio = 0.9
+            r = int(x.shape[1] * merge_ratio)
+
+            # print(f"Attention input x.shape: {x.shape}")
             m, u = token_merge_bipartite2d(
                 x,
                 patch_width,
@@ -155,30 +144,30 @@ class Attention(nn.Module):
                 generator,
                 enable_protection=True,
             )
-
             m_a, u_a = (m, u)
+
             B_q, H_q, N_q, D_q = q.shape
             q_merge_in = q.permute(0, 2, 1, 3).reshape(B_q, N_q, H_q * D_q)
             k_merge_in = k.permute(0, 2, 1, 3).reshape(B_q, N_q, H_q * D_q)
             v_merge_in = v.permute(0, 2, 1, 3).reshape(B_q, N_q, H_q * D_q)
-            
+
             q_out, k_out, v_out = m_a(
                 q_merge_in,
                 mode="mean",
                 extra_tensors=k_merge_in,
                 extra_tensors_2=v_merge_in,
             )
-            
-            del q_merge_in, k_merge_in, v_merge_in
 
+            del q_merge_in, k_merge_in, v_merge_in
+            
             N_m = q_out.shape[1]
+            N = N_m
             q = q_out.reshape(B_q, N_m, H_q, D_q).permute(0, 2, 1, 3)
             k = k_out.reshape(B_q, N_m, H_q, D_q).permute(0, 2, 1, 3)
             v = v_out.reshape(B_q, N_m, H_q, D_q).permute(0, 2, 1, 3)
 
             del q_out, k_out, v_out
 
-            N = N_m
 
         # with sdp_kernel(enable_flash=True, enable_mem_efficient=True):
         x = (
@@ -191,10 +180,8 @@ class Attention(nn.Module):
 
         x = self.proj(x)
         x = self.proj_drop(x)
-        
-        if self.merge_tokens: # unmerge
+        if global_merging is not None:
             x = u_a(x)
-        
         return x
     
 class XFormer_Attention(nn.Module):
@@ -412,8 +399,6 @@ class GlobalLocalDecoderBlock(nn.Module):
         norm_layer=nn.LayerNorm,
         norm_mem=True,
         rope=None,
-        merge_tokens=False,
-        merging_ratio=0.6,
     ):
         super().__init__()
         self.norm1 = norm_layer(dim)
@@ -424,8 +409,6 @@ class GlobalLocalDecoderBlock(nn.Module):
             qkv_bias=qkv_bias,
             attn_drop=attn_drop,
             proj_drop=drop,
-            merge_tokens=merge_tokens,
-            merging_ratio=merging_ratio
         )
 
         self.attn_local = Attention(
@@ -465,9 +448,10 @@ class GlobalLocalDecoderBlock(nn.Module):
         )
         self.norm_y = norm_layer(dim) if norm_mem else nn.Identity()
 
-    def forward(self, x, y, xpos, ypos, shape):
+    def forward(self, x, y, xpos, ypos, shape, global_merging=None, patch_width=None, patch_height=None):
 
         B, S, P, C = shape
+        # print(f"x.shape: {x.shape}")    # f_img
  
         # perform cross attention
         y_ = self.norm_y(y)
@@ -475,7 +459,7 @@ class GlobalLocalDecoderBlock(nn.Module):
 
         # perform global attention
 
-        x = x + self.drop_path(self.attn(self.norm1(x), xpos))
+        x = x + self.drop_path(self.attn(self.norm1(x), xpos, global_merging, patch_width, patch_height))
         x = x + self.drop_path(self.mlp(self.norm3(x)))
 
         x_local = x
