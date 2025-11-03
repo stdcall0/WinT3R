@@ -17,6 +17,18 @@ import torch.nn.functional as F
 
 XFORMERS_AVAILABLE = False
 
+SAGEATTENTION_ENABLED = os.environ.get("SAGEATTENTION_DISABLED") is None
+try:
+    if SAGEATTENTION_ENABLED:
+        from sageattention import sageattn_qk_int8_pv_fp16_cuda as sageattn
+        SAGEATTENTION_AVAILABLE = True
+    else:
+        raise ImportError
+except ImportError:
+    SAGEATTENTION_AVAILABLE = False
+
+if SAGEATTENTION_AVAILABLE:
+    print("Sage attention is activated!")
 
 class Attention(nn.Module):
     def __init__(
@@ -59,22 +71,19 @@ class Attention(nn.Module):
 
         attn_mask = window_mask(N)
         attn_mask = attn_mask.to(x.device)
-        # attn_mask=None
 
-        # if self.fused_attn:
-        x = F.scaled_dot_product_attention(
-            q,
-            k,
-            v,
-            attn_mask=attn_mask,
-            dropout_p=self.attn_drop.p if self.training else 0.0,
-        )
-        # else:
-        #     q = q * self.scale
-        #     attn = q @ k.transpose(-2, -1)
-        #     attn = attn.softmax(dim=-1)
-        #     attn = self.attn_drop(attn)
-        #     x = attn @ v
+        if SAGEATTENTION_AVAILABLE:
+            x = sageattn(
+                q, k, v,
+                attn_mask=attn_mask,
+                dropout_p=self.attn_drop.p if self.training else 0.0
+            )
+        else:
+            x = F.scaled_dot_product_attention(
+                q, k, v,
+                attn_mask=attn_mask,
+                dropout_p=self.attn_drop.p if self.training else 0.0,
+            )
 
         x = x.transpose(1, 2).reshape(B, N, C)
         x = self.proj(x)
@@ -121,13 +130,18 @@ class Masked_Attention(nn.Module):
             k = self.rope(k, pos)
 
         if self.fused_attn:
-            x = F.scaled_dot_product_attention(
-                q,
-                k,
-                v,
-                is_causal=True,
-                dropout_p=self.attn_drop.p if self.training else 0.0,
-            )
+            if SAGEATTENTION_AVAILABLE:
+                x = sageattn(
+                    q, k, v,
+                    is_casual=True,
+                    dropout_p=self.attn_drop.p if self.training else 0.0
+                )
+            else:
+                x = F.scaled_dot_product_attention(
+                    q, k, v,
+                    is_casual=True,
+                    dropout_p=self.attn_drop.p if self.training else 0.0,
+                )
         else:
             causal_mask = torch.triu(torch.ones(N, N), diagonal=1).bool().to(x.device)
             q = q * self.scale
