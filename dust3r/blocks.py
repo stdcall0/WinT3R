@@ -115,13 +115,8 @@ class Attention(nn.Module):
         q_type = q.dtype
         k_type = k.dtype
         if self.rope is not None:
-            q = q.float()
-            k = k.float()
-            with torch.autocast(device_type="cuda", enabled=False):
-                q = self.rope(q, xpos)
-                k = self.rope(k, xpos)
-            q = q.to(q_type)
-            k = k.to(k_type)
+            q = self.rope(q, xpos)
+            k = self.rope(k, xpos)
         
 
         # token merging
@@ -306,16 +301,10 @@ class CrossAttention(nn.Module):
         k_type = k.dtype
         if self.rope is not None:
             if qpos is not None:
-                q = q.float()
-                with torch.autocast(device_type="cuda", enabled=False):
-                    q = self.rope(q, qpos)
-                q = q.to(q_type)
+                q = self.rope(q, qpos)
 
             if kpos is not None:
-                k = k.float()
-                with torch.autocast(device_type="cuda", enabled=False):
-                    k = self.rope(k, kpos)
-                k = k.to(k_type)
+                k = self.rope(k, kpos)
 
         # with sdp_kernel(enable_flash=True, enable_mem_efficient=True):
         x = (

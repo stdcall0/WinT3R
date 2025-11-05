@@ -17,7 +17,7 @@ def extri_to_pose_encoding(
         R = extrinsics[:, :, :3, :3]  # BxSx3x3
         T = extrinsics[:, :, :3, 3]  # BxSx3
         quat = mat_to_quat(R)
-        pose_encoding = torch.cat([T, quat], dim=-1).float()
+        pose_encoding = torch.cat([T, quat], dim=-1)
     else:
         raise NotImplementedError
 

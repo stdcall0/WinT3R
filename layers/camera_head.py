@@ -133,7 +133,7 @@ class CameraHead(nn.Module):
             pose_tokens_modulated = self.trunk(pose_tokens_modulated)   ######B, S, C
             # Compute the delta update for the pose encoding.
             # with torch.amp.autocast(device_type='cuda', enabled=False):
-            pred_pose_enc_delta = self.pose_branch(self.trunk_norm(pose_tokens_modulated.float()))       ######B, S, 9
+            pred_pose_enc_delta = self.pose_branch(self.trunk_norm(pose_tokens_modulated))       ######B, S, 9
 
             if pred_pose_enc is None:
                 pred_pose_enc = pred_pose_enc_delta

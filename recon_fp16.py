@@ -199,7 +199,12 @@ if __name__ == '__main__':
     # Save results
     save_path = os.path.join(args.save_dir, args.save_name)
     os.makedirs(args.save_dir, exist_ok=True)
-    write_ply(pred['points'][masks].detach().cpu().numpy().reshape(-1, 3), colors[masks.detach().cpu()].reshape(-1, 3).detach().cpu().numpy(), save_path)
+    # Convert to FP32 before converting to NumPy (NumPy doesn't support BFloat16)
+    write_ply(
+        pred['points'][masks].detach().float().cpu().numpy().reshape(-1, 3), 
+        colors[masks.detach().cpu()].reshape(-1, 3).detach().cpu().numpy(), 
+        save_path
+    )
     save_image_grid_auto(colors[0].permute(0,3,1,2), save_path.replace('ply', 'png'))
     print(f'Results saved to: {save_path}')
     print(f'Image grid saved to: {save_path.replace("ply", "png")}')

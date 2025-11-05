@@ -315,7 +315,9 @@ class WinT3R(CroCoNet):
             raise NotImplementedError
         full_out = [
             torch.zeros(
-                len(views) * batch_size, *img_out[0].shape[1:], device=img_out[0].device
+                len(views) * batch_size, *img_out[0].shape[1:], 
+                device=img_out[0].device,
+                dtype=img_out[0].dtype  # 保持与输出相同的 dtype
             )
             for _ in range(len(img_out))
         ]
@@ -466,8 +468,8 @@ class WinT3R(CroCoNet):
             dec = dec[-1].reshape(B, S, P, C)
             f_img_local = f_img_local.reshape(B, S, P, C)
 
-            f_img_local_list.append(f_img_local[:, :, 1:].float())
-            dec_list.append(dec[:, :, 1:].float())
+            f_img_local_list.append(f_img_local[:, :, 1:])
+            dec_list.append(dec[:, :, 1:])
 
             state_feat = new_state_feat
             
@@ -478,8 +480,8 @@ class WinT3R(CroCoNet):
         camera_token = torch.cat(camera_embed_list, dim=1)
 
         head_input = [
-            torch.cat(f_img_local_list, dim=1).reshape(-1, P-1, C).float(),
-            torch.cat(dec_list, dim=1).reshape(-1, P-1, C).float(),
+            torch.cat(f_img_local_list, dim=1).reshape(-1, P-1, C),
+            torch.cat(dec_list, dim=1).reshape(-1, P-1, C),
         ]
 
         with torch.amp.autocast(device_type='cuda', enabled=False):
@@ -551,19 +553,19 @@ class WinT3R(CroCoNet):
             assert len(dec) == self.dec_depth + 1
             dec = dec[-1].reshape(B, S, P, C)
             f_img_local = f_img_local.reshape(B, S, P, C)
-            f_img_local_list.append(f_img_local[:, :, 1:].float())
-            dec_list.append(dec[:, :, 1:].float())
+            f_img_local_list.append(f_img_local[:, :, 1:])
+            dec_list.append(dec[:, :, 1:])
 
             state_feat = new_state_feat
             camera_token = torch.cat([dec[:, :, 0], f_img_local[:, :, 0]], dim=-1)
 
             camera_embed_list.append(camera_token)
 
-        camera_token = torch.cat(camera_embed_list, dim=1).float()
+        camera_token = torch.cat(camera_embed_list, dim=1)
 
         head_input = [
-            torch.cat(f_img_local_list, dim=1).reshape(-1, P-1, C).float(),
-            torch.cat(dec_list, dim=1).reshape(-1, P-1, C).float(),
+            torch.cat(f_img_local_list, dim=1).reshape(-1, P-1, C),
+            torch.cat(dec_list, dim=1).reshape(-1, P-1, C),
         ]
 
         with torch.amp.autocast(device_type='cuda', enabled=False):
@@ -681,12 +683,12 @@ class WinT3R(CroCoNet):
             state_feat = new_state_feat
             camera_token = torch.cat([dec[:, :, 0], f_img_local[:, :, 0]], dim=-1)
             camera_embed_list.append(camera_token)
-            camera_token = torch.cat(camera_embed_list, dim=1).float()
+            camera_token = torch.cat(camera_embed_list, dim=1)
             head_input = [
-                f_img_local[:, :, 1:].float().reshape(-1, P-1, C).float(),
-                dec[:, :, 1:].float().reshape(-1, P-1, C).float(),
+                f_img_local[:, :, 1:].reshape(-1, P-1, C),
+                dec[:, :, 1:].reshape(-1, P-1, C),
             ]
-            camera_token = torch.cat(camera_embed_list, dim=1).float()
+            camera_token = torch.cat(camera_embed_list, dim=1)
 
             with torch.amp.autocast(device_type='cuda', enabled=False):
                 ress = self.pts_head(head_input, views[0]["img"])
