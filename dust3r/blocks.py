@@ -100,7 +100,7 @@ class Attention(nn.Module):
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
-        self.rope = rope.float() if rope is not None else None
+        self.rope = rope
 
     def forward(self, x, xpos, global_merging=None, patch_width=None, patch_height=None):
         B, N, C = x.shape
@@ -197,7 +197,7 @@ class XFormer_Attention(nn.Module):
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
-        self.rope = rope.float() if rope is not None else None
+        self.rope = rope
 
     def forward(self, x, xpos):
         B, N, C = x.shape
@@ -279,7 +279,7 @@ class CrossAttention(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
-        self.rope = rope.float() if rope is not None else None
+        self.rope = rope
 
     def forward(self, query, key, value, qpos, kpos):
         B, Nq, C = query.shape
